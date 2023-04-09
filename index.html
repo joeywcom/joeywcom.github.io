@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Backyard Size Estimator</title>
+    <!-- Include necessary libraries and scripts -->
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDdAon0Ytk3RTVn5_m14FFGi424uTVH-QI&libraries=places"></script>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://code.earthengine.google.com/api.js"></script>
+</head>
+<body>
+    <h1>Backyard Size Estimator</h1>
+    <form id="addressForm">
+        <label for="addressInput">Enter Address:</label>
+        <input type="text" id="addressInput" name="addressInput" placeholder="e.g. 123 Main St, California" />
+        <button type="submit">Submit</button>
+    </form>
+    <div id="result"></div>
+
+    <script>
+        // Function to handle form submission
+        $("#addressForm").submit(function(event) {
+            event.preventDefault();
+            var address = $("#addressInput").val();
+            // Use Google Maps Geocoding API to convert address to coordinates
+            var geocoder = new google.maps.Geocoder();
+            geocoder.geocode({ address: address }, function(results, status) {
+                if (status === google.maps.GeocoderStatus.OK) {
+                    var latitude = results[0].geometry.location.lat();
+                    var longitude = results[0].geometry.location.lng();
+                    // Call function to estimate backyard size with coordinates
+                    estimateBackyardSize(latitude, longitude);
+                } else {
+                    $("#result").text("Error: " + status);
+                }
+            });
+        });
+
+        // Function to estimate backyard size with coordinates
+        function estimateBackyardSize(latitude, longitude) {
+            // Define region of interest as a point buffer around the coordinates
+            var roi = ee.Geometry.Point([longitude, latitude]).buffer(100); // Adjust buffer size as needed
+
+            // Load the Sentinel-2 imagery collection for the region and time period of interest
+            var collection = ee.ImageCollection('COPERNICUS/S2_SR')
+                                .filterBounds(roi)
+                                .filterDate('2020-01-01', '2020-12-31')
+                                .sort('CLOUDY_PIXEL_PERCENTAGE')
+                                .first();
+
+            // Clip the imagery to the region of interest
+            var clippedImage = collection.clip(roi);
+
+            // Calculate the area of backyard by thresholding the imagery
+            var thresholded = clippedImage.select('B4').gt(0.15); // Use appropriate band and threshold value
+
+            // Calculate area in square meters
+            var area = thresholded.multiply(ee.Image.pixelArea()).reduceRegion({
+                reducer: ee.Reducer.sum(),
+                geometry: roi,
+                scale: 10,
+                maxPixels: 1e13
+            });
+
+            // Convert area from square meters to square feet
+            var estimatedAreaSqM = area.get('B4').getInfo();
+            var estimatedAreaSqFt = estimatedAreaSqM * 10.764;
+            
+            // Display the estimated backyard size in square feet
+            $("#result").text("Estimated Backyard Size: " + estimatedAreaSqFt.toFixed(2) + " square feet");
+        }
+    </script>
+</body>
+</html>
