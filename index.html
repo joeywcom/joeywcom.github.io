@@ -3,7 +3,7 @@
 <head>
     <title>Backyard Size Estimator</title>
     <!-- Include necessary libraries and scripts -->
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDdAon0Ytk3RTVn5_m14FFGi424uTVH-QI&libraries=places"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=places"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://code.earthengine.google.com/api.js"></script>
 </head>
@@ -15,8 +15,11 @@
         <button type="submit">Submit</button>
     </form>
     <div id="result"></div>
+    <div id="map"></div>
 
     <script>
+        var map; // Google Map instance
+
         // Function to handle form submission
         $("#addressForm").submit(function(event) {
             event.preventDefault();
@@ -64,10 +67,12 @@
             // Convert area from square meters to square feet
             var estimatedAreaSqM = area.get('B4').getInfo();
             var estimatedAreaSqFt = estimatedAreaSqM * 10.764;
-            
+
             // Display the estimated backyard size in square feet
             $("#result").text("Estimated Backyard Size: " + estimatedAreaSqFt.toFixed(2) + " square feet");
+
+            // Update the map with the satellite imagery and overlay
+            updateMap(latitude, longitude, roi);
         }
-    </script>
-</body>
-</html>
+
+        // Function to update the map
